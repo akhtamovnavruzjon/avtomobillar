@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avtomobillar API Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen font-sans">
+
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight">Avtomobillar Boshqaruvi</h1>
+            <p class="text-gray-600 mt-2">Django REST Framework API va Rasmlar integratsiyasi</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+            <div class="bg-white p-6 rounded-lg shadow-md h-fit">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2">Yangi Mashina Qo'shish</h2>
+                <form id="add-car-form" class="space-y-4" enctype="multipart/form-data">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Mashina nomi</label>
+                        <input type="text" id="car-name" required placeholder="Masalan: Chevrolet Gentra"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Narxi ($)</label>
+                        <input type="number" step="0.01" id="car-price" required placeholder="Masalan: 13000"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Rangi</label>
+                        <input type="text" id="car-color" required placeholder="Masalan: Oq"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Ishlab chiqarilgan yili</label>
+                        <input type="number" id="car-year" required placeholder="Masalan: 2024"
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700">Mashina rasmi</label>
+                        <input type="file" id="car-image" accept="image/*" required
+                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                    <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200 shadow-md">
+                        Saqlash (POST)
+                    </button>
+                </form>
+            </div>
+
+            <div class="lg:col-span-2">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Mavjud Avtomobillar</h2>
+                    <button onclick="fetchCars()"
+                            class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-1.5 px-4 rounded text-sm transition">
+                        Yangilash 🔄
+                    </button>
+                </div>
+
+                <div id="loader" class="text-center py-10 text-gray-500 font-semibold">
+                    Ma'lumotlar yuklanmoqda...
+                </div>
+
+                <div id="cars-container" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
+
+                <div id="empty-message" class="text-center py-10 text-gray-500 hidden bg-white rounded-lg shadow p-6">
+                    Hozircha mashinalar mavjud emas.
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="edit-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 mx-4">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="text-xl font-bold text-gray-800">Mashinani tahrirlash</h3>
+                <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700 text-2xl font-semibold">&times;</button>
+            </div>
+            <form id="edit-car-form" class="space-y-4">
+                <input type="hidden" id="edit-car-id">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Mashina nomi</label>
+                    <input type="text" id="edit-car-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Narxi ($)</label>
+                    <input type="number" step="0.01" id="edit-car-price" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Rangi</label>
+                    <input type="text" id="edit-car-color" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Yili</label>
+                    <input type="number" id="edit-car-year" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700">Yangi rasm (ixtiyoriy)</label>
+                    <input type="file" id="edit-car-image" accept="image/*" class="mt-1 block w-full text-sm text-gray-500">
+                </div>
+                <div class="flex justify-end space-x-3 pt-4 border-t">
+                    <button type="button" onclick="closeEditModal()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded">
+                        Bekor qilish
+                    </button>
+                    <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
+                        Yangilash (PUT)
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const BASE_API_URL = 'http://127.0.0.1:8000/api/v1/';
+        const LIST_URL = `${BASE_API_URL}list/`;
+        const CREATE_URL = `${BASE_API_URL}create/`;
+        const EDIT_URL = `${BASE_API_URL}edit/`; // id keyinchalik ulanadi
+        const DELETE_URL = `${BASE_API_URL}delete/`;
+
+        const BACKEND_HOST = 'http://127.0.0.1:8000';
+        let allCarsData = []; // Barcha mashinalarni saqlab turish uchun global o'zgaruvchi
+
+        // 1. RO'YXATNI OLISh (GET)
+        function fetchCars() {
+            const container = document.getElementById('cars-container');
+            const loader = document.getElementById('loader');
+            const emptyMessage = document.getElementById('empty-message');
+
+            loader.classList.remove('hidden');
+            container.classList.add('hidden');
+            emptyMessage.classList.add('hidden');
+
+            fetch(LIST_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error('Tarmoq xatosi!');
+                    return response.json();
+                })
+                .then(data => {
+                    loader.classList.add('hidden');
+                    container.innerHTML = '';
+                    allCarsData = data; // Ma'lumotlarni tahrirlashda foydalanish uchun saqlaymiz
+
+                    if (data.length === 0) {
+                        emptyMessage.classList.remove('hidden');
+                        return;
+                    }
+
+                    container.classList.remove('hidden');
+
+                    data.forEach(car => {
+                        const card = document.createElement('div');
+                        card.className = "bg-white rounded-lg shadow-md overflow-hidden border border-gray-100 flex flex-col justify-between hover:shadow-lg transition duration-200";
+
+                        const carId = car.id;
+                        const carName = car.name || "Nomsiz mashina";
+                        const carPrice = car.price ? parseFloat(car.price).toLocaleString() : "Noma'lum";
+                        const carColor = car.color || "Noma'lum";
+                        const carYear = car.year || "Noma'lum";
+
+                        const carImageField = car.image || car.cover;
+                        let carImageSrc = "https://via.placeholder.com/300x200?text=Rasm+Mavjud+Emas";
+                        if (carImageField) {
+                            carImageSrc = carImageField.startsWith('http') ? carImageField : `${BACKEND_HOST}${carImageField}`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="h-48 w-full bg-gray-200 overflow-hidden">
+                                <img src="${carImageSrc}" alt="${carName}" class="w-full h-full object-cover" onerror="this.src='https://via.placeholder.com/300x200?text=Rasm+Xatoligi'">
+                            </div>
+                            <div class="p-6 flex-grow">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-xl font-bold text-gray-800">${carName}</h3>
+                                    <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">ID: ${carId}</span>
+                                </div>
+                                <div class="mt-4 space-y-2">
+                                    <p class="text-gray-600"><span class="font-semibold text-gray-700">Narxi:</span> $${carPrice}</p>
+                                    <p class="text-gray-600"><span class="font-semibold text-gray-700">Rangi:</span> ${carColor}</p>
+                                    <p class="text-gray-600"><span class="font-semibold text-gray-700">Yili:</span> ${carYear}</p>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-6 py-3 flex justify-between gap-2 border-t border-gray-100">
+                                <button onclick="openEditModal(${carId})"
+                                        class="bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-1.5 px-4 rounded text-xs transition duration-150">
+                                    Tahrirlash (EDIT)
+                                </button>
+                                <button onclick="deleteCar(${carId})"
+                                        class="bg-red-500 hover:bg-red-600 text-white font-bold py-1.5 px-4 rounded text-xs transition duration-150">
+                                    O'chirish (DELETE)
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                })
+                .catch(error => {
+                    loader.classList.add('hidden');
+                    alert('API ga ulanishda xatolik! \n' + error.message);
+                });
+        }
+
+        // 2. YANGI MASHINA QO'SHISH (POST)
+        document.getElementById('add-car-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const name = document.getElementById('car-name').value;
+            const price = document.getElementById('car-price').value;
+            const color = document.getElementById('car-color').value;
+            const year = document.getElementById('car-year').value;
+            const imageFile = document.getElementById('car-image').files[0];
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('price', price);
+            formData.append('color', color);
+            formData.append('year', year);
+            formData.append('image', imageFile);
+
+            fetch(CREATE_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(async response => {
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    const errorText = errorData ? JSON.stringify(errorData) : "Noma'lum xatolik";
+                    throw new Error(`Server xatosi: ${errorText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Mashina va rasm muvaffaqiyatli qo\'shildi! 🚗🎉');
+                document.getElementById('add-car-form').reset();
+                fetchCars();
+            })
+            .catch(error => {
+                alert('XATOLIK YUZ BERDI:\n' + error.message);
+            });
+        });
+
+        // 3. TAHRIRLASH (EDIT - MODAL OCHISH)
+        function openEditModal(id) {
+            // Tanlangan mashinani massivdan qidirib topamiz
+            const car = allCarsData.find(c => c.id === id);
+            if (!car) return;
+
+            // Modal formaga eski ma'lumotlarni to'ldiramiz
+            document.getElementById('edit-car-id').value = car.id;
+            document.getElementById('edit-car-name').value = car.name || '';
+            document.getElementById('edit-car-price').value = car.price || '';
+            document.getElementById('edit-car-color').value = car.color || '';
+            document.getElementById('edit-car-year').value = car.year || '';
+            document.getElementById('edit-car-image').value = ''; // Rasm yuklash maydonini bo'shatamiz
+
+            // Modalni ekranda ko'rsatamiz
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('edit-modal').classList.add('hidden');
+        }
+
+        // 4. TAHRIRLANGAN MA'LUMOTLARNI YUBORISH (PUT - Faqat matnni o'zgartirish uchun variant)
+        document.getElementById('edit-car-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const id = document.getElementById('edit-car-id').value;
+            const name = document.getElementById('edit-car-name').value;
+            const price = document.getElementById('edit-car-price').value;
+            const color = document.getElementById('edit-car-color').value;
+            const year = document.getElementById('edit-car-year').value;
+            const imageFile = document.getElementById('edit-car-image').files[0];
+
+            const formData = new FormData();
+            formData.append('name', name);
+            formData.append('price', price);
+            formData.append('color', color); // Siz o'zgartirgan yangi rang shu yerda ketadi
+            formData.append('year', year);
+
+            // Agar yangi rasm tanlangan bo'lsa, faylni o'zini yuboramiz
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+            // Agar rasm tanlanmagan bo'lsa, Django PUT da xato bermasligi uchun
+            // API loyihangiz PATCH so'rovini qo'llab-quvvatlasa, pastdagi method'ni PATCH qiling.
+            // Hozircha mavjud rasmni yo'qotib qo'ymaslik uchun uni qayta yuboramiz:
+            else {
+                const currentCar = allCarsData.find(c => c.id == id);
+                if (currentCar && currentCar.image) {
+                    // Agar rasm to'liq URL bo'lsa, faqat media yo'lini ajratib olamiz
+                    let cleanPath = currentCar.image;
+                    if (cleanPath.startsWith('http')) {
+                        const urlObj = new URL(cleanPath);
+                        cleanPath = urlObj.pathname; // masalan: /media/cover/photo.jpg
+                    }
+                    // Djangoga eski rasm yo'lini string sifatida yuboramiz,
+                    // lekin ba'zi serializerlar buni qabul qilmasligi mumkin (fayl kutadi)
+                }
+            }
+
+            // AGAR UShBU SO'ROV XATO BERSA, 'PUT' SO'ZINI 'PATCH' GA ALMAShTIRIB KO'RING
+            fetch(`${EDIT_URL}${id}/`, {
+                method: 'PATCH', // PATCH faqat o'zgargan maydonni (masalan rangni) yangilash uchun eng zo'r yechim!
+                body: formData
+            })
+            .then(async response => {
+                // Agar PATCH xato bersa, eski usulda PUT bilan urinib ko'ramiz
+                if (!response.ok && response.status === 405) {
+                    return fetch(`${EDIT_URL}${id}/`, { method: 'PUT', body: formData }).then(r => r.json());
+                }
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    const errorText = errorData ? JSON.stringify(errorData) : "Noma'lum xatolik";
+                    throw new Error(`Server xatosi: ${errorText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                alert('Mashina muvaffaqiyatli tahrirlandi! Rangi o\'zgardi. ✏️🎉');
+                closeEditModal();
+                fetchCars();
+            })
+            .catch(error => {
+                alert('Tahrirlashda xatolik:\n' + error.message);
+            });
+        });
+
+        // 5. O'CHIRISH (DELETE)
+        function deleteCar(id) {
+            if (confirm(`ID: ${id} bo'lgan avtomobilni o'chirmoqchimisiz?`)) {
+                fetch(`${DELETE_URL}${id}/`, {
+                    method: 'DELETE'
+                })
+                .then(response => {
+                    if (response.status === 204 || response.ok) {
+                        alert('Avtomobil o\'chirildi!');
+                        fetchCars();
+                    } else {
+                        throw new Error('Xatolik yuz berdi.');
+                    }
+                })
+                .catch(error => {
+                    alert('Xatolik: ' + error.message);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', fetchCars);
+    </script>
+</body>
+</html>
